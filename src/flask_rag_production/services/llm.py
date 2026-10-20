@@ -1,43 +1,63 @@
+
 import os
 
-from google import genai
+from groq import Groq
 
 
-class GeminiLLM:
+class GroqLLM:
     def __init__(self, model: str | None = None):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GROQ_API_KEY")
 
         if not api_key:
             raise RuntimeError(
-                "GEMINI_API_KEY is missing. Check your .env configuration."
+                "GROQ_API_KEY is missing. Check your .env configuration."
             )
 
         self.model = model or os.getenv(
-            "GEMINI_MODEL",
-            "gemini-3.8-flash",
+            "GROQ_MODEL",
+            "openai/gpt-oss-20b",
         )
 
-        self.client = genai.Client(api_key=api_key)
+        self.client = Groq(api_key=api_key)
 
     def generate(self, prompt: str) -> str:
-        response = self.client.models.generate_content(
+        response = self.client.chat.completions.create(
             model=self.model,
-            contents=prompt,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_completion_tokens=1024,
         )
 
-        if response.text is None:
-            raise RuntimeError("Gemini returned an empty response.")
+        content = response.choices[0].message.content
 
-        return response.text
+        if not content:
+            raise RuntimeError("Groq returned an empty response.")
+
+        return content
 
     def generate_stream(self, prompt: str):
-        for chunk in self.client.models.generate_content_stream(
+        stream = self.client.chat.completions.create(
             model=self.model,
-            contents=prompt,
-        ):
-            if chunk.text:
-                yield chunk.text
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_completion_tokens=1024,
+            stream=True,
+        )
+
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+
+            content = chunk.choices[0].delta.content
+
+            if content:
+                yield content
 
 
-# Backward compatibility for code that imports OllamaLLM.
-OllamaLLM = GeminiLLM
+# Compatibility with existing imports in the RAG pipeline.
+GeminiLLM = GroqLLM
+OllamaLLM = GroqLLM
