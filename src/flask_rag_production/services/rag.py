@@ -195,13 +195,10 @@ def answer_question(
         ) as retrieval_span:
 
             results = hybrid_search_chunks(
-
                 query,
-
                 size=top_k,
-
                 candidate_size=10,
-
+                trace_parent=retrieval_span,
             )
 
             retrieval_span.update(
@@ -627,6 +624,7 @@ def stream_answer(
                 query,
                 size=top_k,
                 candidate_size=10,
+                trace_parent=retrieval_span,
             )
             retrieval_span.update(
                 output={
@@ -642,7 +640,6 @@ def stream_answer(
         if on_sources is not None:
             on_sources(results)
 
-        
         # 2. CONTEXT BUILDING
         context_start = time.perf_counter()
 
@@ -701,7 +698,6 @@ def stream_answer(
             model=llm.model,
             input={"prompt": prompt},
         )
-
 
         try:
             for chunk in llm.generate_stream(prompt):
@@ -775,4 +771,6 @@ def stream_answer(
         )
     finally:
         root_span.end()
+
+
 
