@@ -1,57 +1,43 @@
-import json
 import os
 
-import httpx
+from google import genai
 
 
-class OllamaLLM:
-    def __init__(
-        self,
-        base_url: str | None = None,
-        model: str = "llama3.2:3b",
-    ):
-        self.base_url = base_url or os.getenv(
-            "OLLAMA_BASE_URL",
-            "http://localhost:11434",
+class GeminiLLM:
+    def __init__(self, model: str | None = None):
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        if not api_key:
+            raise RuntimeError(
+                "GEMINI_API_KEY is missing. Check your .env configuration."
+            )
+
+        self.model = model or os.getenv(
+            "GEMINI_MODEL",
+            "gemini-3.8-flash",
         )
-        self.model = model
+
+        self.client = genai.Client(api_key=api_key)
 
     def generate(self, prompt: str) -> str:
-        response = httpx.post(
-            f"{self.base_url}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-            },
-            timeout=300,
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=prompt,
         )
 
-        response.raise_for_status()
+        if response.text is None:
+            raise RuntimeError("Gemini returned an empty response.")
 
-        data = response.json()
-
-        return data["response"]
+        return response.text
 
     def generate_stream(self, prompt: str):
-        with httpx.stream(
-            "POST",
-            f"{self.base_url}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": True,
-            },
-            timeout=300,
-        ) as response:
-            response.raise_for_status()
+        for chunk in self.client.models.generate_content_stream(
+            model=self.model,
+            contents=prompt,
+        ):
+            if chunk.text:
+                yield chunk.text
 
-            for line in response.iter_lines():
-                if line:
-                    data = json.loads(line)
 
-                    if "response" in data:
-                        yield data["response"]
-
-                    if data.get("done"):
-                        break
+# Backward compatibility for code that imports OllamaLLM.
+OllamaLLM = GeminiLLM

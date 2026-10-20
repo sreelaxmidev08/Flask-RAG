@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f2f8">
+  <title>Flask Docs — Documentation assistant</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Conversation sidebar">
+      <div class="brand-row">
+        <a class="brand" href="#" aria-label="Flask Docs home"><span class="brand-mark" aria-hidden="true">✦</span><span class="brand-label">Flask Docs</span></a>
+        <button class="icon-button collapse-button" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar">‹</button>
+      </div>
+      <button class="new-chat" id="newChat"><span class="new-chat-icon" aria-hidden="true">＋</span><span class="new-chat-label">New chat</span></button>
+      <label class="history-search" title="Search conversations"><span class="history-search-icon" aria-hidden="true">⌕</span><input id="historyFilter" type="search" placeholder="Search chats" aria-label="Search conversations"></label>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-item active" type="button"><span class="nav-icon">⌂</span><span class="nav-label">Assistant</span></button>
+        <a class="nav-item docs-link" id="openSearch" href="https://flask.palletsprojects.com/en/stable/" target="_blank" rel="noopener noreferrer" aria-label="Open the official Flask documentation in a new tab"><span class="nav-icon">⌕</span><span class="nav-label">Explore docs</span><span class="nav-arrow" aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="history-heading"><span>YOUR CHATS</span></div>
+      <div class="conversation-list" id="conversationList" aria-label="Conversations"></div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" id="openSidebar" aria-label="Open sidebar">☰</button>
+        <div class="assistant-pill"><span class="mini-mark">✦</span><span>Flask Assistant</span></div>
+        <div class="top-actions"><button class="icon-button" id="searchToggle" aria-label="Search documentation">⌕</button><button class="source-toggle" id="toggleSources" type="button" aria-expanded="false" aria-controls="sourcesPanel">Sources</button></div>
+      </header>
+
+      <div class="workspace">
+        <section class="chat-column" aria-label="Chat">
+          <div class="conversation-view" id="conversationView" aria-live="polite"></div>
+          <form class="composer-wrap" id="composerForm">
+            <div class="composer">
+              <label class="sr-only" for="questionInput">Ask a question about Flask</label>
+              <textarea id="questionInput" rows="1" placeholder="Ask anything about Flask…" maxlength="4000"></textarea>
+              <div class="composer-controls"><button class="send-button" id="sendButton" type="submit" aria-label="Send question"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="M10 16V4M5.5 8.5 10 4l4.5 4.5" /></svg></button></div>
+            </div>
+            <div class="composer-foot"><span>Answers are grounded in the Flask documentation.</span><span id="charCount">0 / 4000</span></div>
+          </form>
+        </section>
+        <aside class="sources-panel" id="sourcesPanel" aria-label="Retrieved sources" hidden></aside>
+      </div>
+      <footer class="app-footer"><span>Flask Documentation Assistant</span><span>Powered by hybrid search</span></footer>
+    </main>
+  </div>
+  <div class="mobile-scrim" id="mobileScrim"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="js/api.js" defer></script>
+  <script src="js/sources.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>

@@ -1,21 +1,19 @@
-from sentence_transformers import CrossEncoder
-
+import os
+import httpx
 
 class Reranker:
     def __init__(self):
-        self.model = None
+        self.api_key = os.getenv("JINA_API_KEY")
+        self.model = os.getenv(
+            "JINA_RERANKER_MODEL",
+            "jina-reranker-v3.5",
+        )
+        self.api_url = "https://api.jina.ai/v1/rerank"
 
-    def _load_model(self):
-        """Load the reranker model only when it is first needed."""
-
-        if self.model is None:
-            print("Loading reranker model: BAAI/bge-reranker-v2-m3")
-
-            self.model = CrossEncoder(
-                "BAAI/bge-reranker-v2-m3"
+        if not self.api_key:
+            raise RuntimeError(
+                "JINA_API_KEY is missing. Check your .env configuration."
             )
-
-        return self.model
 
     def rerank(
         self,
@@ -23,26 +21,61 @@ class Reranker:
         results: list[dict],
         top_k: int = 5,
     ) -> list[dict]:
+        """Rerank retrieved chunks using Jina's hosted API."""
 
-        model = self._load_model()
+        if not results or top_k <= 0:
+            return []
 
-        pairs = [
-            (query, result["content"])
+        documents = [
+            result["content"]
             for result in results
         ]
 
-        scores = model.predict(pairs)
+        payload = {
+            "model": self.model,
+            "query": query,
+            "documents": documents,
+            "top_n": min(top_k, len(documents)),
+        }
+
+        try:
+            response = httpx.post(
+                self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        except httpx.HTTPStatusError as exc:
+            raise RuntimeError(
+                "Jina reranking API returned HTTP "
+                f"{exc.response.status_code}: {exc.response.text}"
+            ) from exc
+
+        except httpx.RequestError as exc:
+            raise RuntimeError(
+                f"Could not connect to the Jina reranking API: {exc}"
+            ) from exc
 
         reranked = []
 
-        for result, score in zip(results, scores):
-            result = result.copy()
-            result["rerank_score"] = float(score)
-            reranked.append(result)
+        for item in data.get("results", []):
+            index = item["index"]
 
-        reranked.sort(
-            key=lambda result: result["rerank_score"],
-            reverse=True,
-        )
+            if not isinstance(index, int) or not (
+                0 <= index < len(results)
+            ):
+                continue
+
+            result = results[index].copy()
+            result["rerank_score"] = float(
+                item["relevance_score"]
+            )
+            reranked.append(result)
 
         return reranked[:top_k]
